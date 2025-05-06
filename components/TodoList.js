@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Keyboard } from 'react-native';
+
 import {
   View,
   Text,
@@ -16,6 +17,7 @@ import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker'
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 
@@ -27,6 +29,25 @@ export default function TodoList() {
   const [tasks, setTasks] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null)
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    if (isReady) {
+      AsyncStorage.setItem('todos', JSON.stringify(tasks))
+    }
+  }, [tasks, isReady]);
+
+  useEffect(() => {
+    const loadTasks = async () => {
+      const savedTasks = await AsyncStorage.getItem('todos');
+      if (savedTasks) {
+        setTasks(JSON.parse(savedTasks));
+      }
+      setIsReady(true);
+    }
+
+    loadTasks();
+  }, [])
 
   const scheduleNotification = async (taskTitle, deadlineDate) => {
     const triggerTime = new Date(deadlineDate); // deadlineDate must be a full Date object
@@ -101,9 +122,18 @@ export default function TodoList() {
       const updatedTasks = [...tasks.slice(0, -1), updatedTask];
       
       setTasks(updatedTasks);
+      await AsyncStorage.setItem('todos', JSON.stringify(updatedTasks));
     }
   };
-  
+
+  if (!isReady) {
+    return (
+      <View style={styles.container}>
+        <Text>Loading ...</Text>
+      </View>
+    )
+  } 
+
   return (
     <View style={[{ paddingTop: insets.top, paddingBottom: insets.bottom }, styles.container]}>
       <Text style={styles.heading}>My ToDay List</Text>
@@ -139,6 +169,8 @@ export default function TodoList() {
             }}
           >
             <TouchableOpacity style={styles.listItem} activeOpacity={0.8} onPress={() => toggleSelectedTask(item)}>
+              {!item?.dueDate && <Text style={styles.dateText}>Noted</Text>}
+              {item?.dueDate && <Text style={styles.dateText}>Todo</Text>}
               <Text style={styles.itemText}>{item.value}</Text>
               {selectedTask && selectedTask.id === item.id && (
                 <View style={styles.dateContainer}>
