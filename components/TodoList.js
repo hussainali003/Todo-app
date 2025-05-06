@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Keyboard } from 'react-native';
-
 import {
   View,
   Text,
@@ -9,14 +8,16 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
+
 import { Button } from 'react-native-elements';
 import SwipeableItem from 'react-native-swipeable-item';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker'
-
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+
+
 
 import { colors } from '../theme.js'; // Import your color palette
 
@@ -27,20 +28,44 @@ export default function TodoList() {
   const [selectedTask, setSelectedTask] = useState(null)
   const [showTimePicker, setShowTimePicker] = useState(false);
 
+  const scheduleNotification = async (taskTitle, deadlineDate) => {
+    const triggerTime = new Date(deadlineDate); // deadlineDate must be a full Date object
+
+    const notificationId = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Task Due',
+        body: `Your task "${taskTitle}" is now due.`,
+        sound: true,
+      },
+      trigger: triggerTime, // Use Date object directly
+    });
+
+    return notificationId
+  };
+
   const addTask = () => {
     const trimmed = task.trim();
     if (trimmed) {
       const date = new Date();
-      const formattedDate = `${date.getHours()}:${date.getMinutes() + 1}`;
-      const newTask = { id: Date.now().toString(), value: trimmed, createdAt: formattedDate, dueDate: 'add this functionality' };
+      const formattedDate = `${date.getHours()}:${date.getMinutes()}`;
+
+      const newTask = { id: Date.now().toString(), value: trimmed, createdAt: formattedDate};
+
       setTasks(prev => [...prev, newTask]);
       setTask('');
       setShowTimePicker(true);
+
       Keyboard.dismiss();
     }
   };
 
-  const deleteTask = (id) => {
+  const deleteTask = async (id) => {
+    const taskToDelete = tasks.find(task => task.id === id)
+
+    if (taskToDelete?.notificationId) {
+      await Notifications.cancelScheduledNotificationAsync(taskToDelete.notificationId);
+    }
+
     setTasks(prev => prev.filter(task => task.id !== id));
   };
 
@@ -52,17 +77,33 @@ export default function TodoList() {
     }
   }
 
-  const onTimeChange = (event, selectedTime) => {
+  const onTimeChange = async (event, selectedTime) => {
     setShowTimePicker(false);
     if (selectedTime) {
+    const now = new Date();
+
+    const deadline = new Date();
+    deadline.setHours(selectedTime.getHours())
+    deadline.setMinutes(selectedTime.getMinutes())
+    deadline.setSeconds(0);
+    deadline.setMilliseconds(0);
+
+    if (deadline < now) {
+      return;
+    }
+
+      const notificationId = await scheduleNotification(tasks[tasks.length-1].value, deadline);
+      
       const timeString = `${selectedTime.getHours()}:${String(selectedTime.getMinutes()).padStart(2, '0')}`;
-      const updatedTask = { ...tasks[tasks.length - 1], dueDate: timeString }; // Update latest task
+      
+      const updatedTask = { ...tasks[tasks.length - 1], dueDate: timeString, notificationId }; // Update latest task
+      
       const updatedTasks = [...tasks.slice(0, -1), updatedTask];
+      
       setTasks(updatedTasks);
     }
   };
   
-
   return (
     <View style={[{ paddingTop: insets.top, paddingBottom: insets.bottom }, styles.container]}>
       <Text style={styles.heading}>My ToDay List</Text>
@@ -105,10 +146,12 @@ export default function TodoList() {
                     <MaterialIcons name='calendar-month' style={{paddingTop: 2}}  color={colors.primary} />
                     <Text style={styles.dateText}>Created At: {selectedTask.createdAt || 'N/A'}</Text>
                   </View>
-                  <View style={styles.createdAtContainer}>
-                    <MaterialCommunityIcons name='calendar-clock' style={{paddingTop: 2}} color={colors.primary} />
-                    <Text style={styles.dateText}>Deadline: {selectedTask.dueDate || 'N/A'}</Text>
-                  </View>
+                  {item?.dueDate && (
+                    <View style={styles.createdAtContainer}>
+                      <MaterialCommunityIcons name='calendar-clock' style={{paddingTop: 2}} color={colors.primary} />
+                      <Text style={styles.dateText}>Deadline: {selectedTask.dueDate || 'N/A'}</Text>
+                    </View>
+                  )}
                 </View>
               )}
             </TouchableOpacity>
