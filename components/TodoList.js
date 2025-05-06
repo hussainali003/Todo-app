@@ -1,28 +1,42 @@
 import React, { useState } from 'react';
+import { Keyboard } from 'react-native';
+
 import {
   View,
   Text,
   TextInput,
   FlatList,
   StyleSheet,
+  TouchableOpacity,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import SwipeableItem from 'react-native-swipeable-item';
 import { Button } from 'react-native-elements';
+import SwipeableItem from 'react-native-swipeable-item';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import DateTimePicker from '@react-native-community/datetimepicker'
+
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 
 import { colors } from '../theme.js'; // Import your color palette
 
 export default function TodoList() {
+  const insets = useSafeAreaInsets();
   const [task, setTask] = useState('');
   const [tasks, setTasks] = useState([]);
-  const insets = useSafeAreaInsets();
+  const [selectedTask, setSelectedTask] = useState(null)
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const addTask = () => {
     const trimmed = task.trim();
     if (trimmed) {
-      const newTask = { id: Date.now().toString(), value: trimmed };
+      const date = new Date();
+      const formattedDate = `${date.getHours()}:${date.getMinutes() + 1}`;
+      const newTask = { id: Date.now().toString(), value: trimmed, createdAt: formattedDate, dueDate: 'add this functionality' };
       setTasks(prev => [...prev, newTask]);
       setTask('');
+      setShowTimePicker(true);
+      Keyboard.dismiss();
     }
   };
 
@@ -30,10 +44,28 @@ export default function TodoList() {
     setTasks(prev => prev.filter(task => task.id !== id));
   };
 
+  const toggleSelectedTask = (item) => {
+    if (selectedTask && selectedTask.id === item.id) {
+      setSelectedTask(null);
+    } else {
+      setSelectedTask(item)
+    }
+  }
+
+  const onTimeChange = (event, selectedTime) => {
+    setShowTimePicker(false);
+    if (selectedTime) {
+      const timeString = `${selectedTime.getHours()}:${String(selectedTime.getMinutes()).padStart(2, '0')}`;
+      const updatedTask = { ...tasks[tasks.length - 1], dueDate: timeString }; // Update latest task
+      const updatedTasks = [...tasks.slice(0, -1), updatedTask];
+      setTasks(updatedTasks);
+    }
+  };
+  
+
   return (
     <View style={[{ paddingTop: insets.top, paddingBottom: insets.bottom }, styles.container]}>
-      <Text style={styles.heading}>My ToDo List</Text>
-
+      <Text style={styles.heading}>My ToDay List</Text>
       <View style={styles.inputRow}>
         <TextInput
           style={styles.input}
@@ -41,6 +73,7 @@ export default function TodoList() {
           placeholderTextColor="#aaa"
           value={task}
           onChangeText={setTask}
+          onSubmitEditing={addTask}
           returnKeyType="done"
         />
         <Button
@@ -50,7 +83,6 @@ export default function TodoList() {
           onPress={addTask}
         />
       </View>
-
       <FlatList
         style={styles.list}
         data={tasks}
@@ -65,12 +97,33 @@ export default function TodoList() {
               }
             }}
           >
-            <View style={styles.listItem}>
+            <TouchableOpacity style={styles.listItem} activeOpacity={0.8} onPress={() => toggleSelectedTask(item)}>
               <Text style={styles.itemText}>{item.value}</Text>
-            </View>
+              {selectedTask && selectedTask.id === item.id && (
+                <View style={styles.dateContainer}>
+                  <View style={styles.createdAtContainer}>
+                    <MaterialIcons name='calendar-month' style={{paddingTop: 2}}  color={colors.primary} />
+                    <Text style={styles.dateText}>Created At: {selectedTask.createdAt || 'N/A'}</Text>
+                  </View>
+                  <View style={styles.createdAtContainer}>
+                    <MaterialCommunityIcons name='calendar-clock' style={{paddingTop: 2}} color={colors.primary} />
+                    <Text style={styles.dateText}>Deadline: {selectedTask.dueDate || 'N/A'}</Text>
+                  </View>
+                </View>
+              )}
+            </TouchableOpacity>
           </SwipeableItem>
         )}
       />
+      {showTimePicker && (
+        <DateTimePicker
+          mode="time"
+          value={new Date()}
+          is24Hour={true}
+          display="default"
+          onChange={onTimeChange}
+        />
+      )}
     </View>
   );
 }
@@ -124,4 +177,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
   },
+  dateContainer: {
+    paddingTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  createdAtContainer: {
+    columnGap: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateText: {
+    fontSize: 10,
+    fontFamily: 'Oswald-Bold',
+    color: colors.primary,
+  }
 });
