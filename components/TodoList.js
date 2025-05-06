@@ -20,7 +20,8 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
-
+import {createNewTask, removeTask} from '../utils/taskUtils.js'
+import {cancelTaskNotification} from '../utils/notificationUtils.js'
 import { colors } from '../theme.js'; // Import your color palette
 
 export default function TodoList() {
@@ -65,29 +66,25 @@ export default function TodoList() {
   };
 
   const addTask = () => {
-    const trimmed = task.trim();
-    if (trimmed) {
-      const date = new Date();
-      const formattedDate = `${date.getHours()}:${date.getMinutes()}`;
+    const newTask = createNewTask(task);
 
-      const newTask = { id: Date.now().toString(), value: trimmed, createdAt: formattedDate};
-
+    if (newTask) {
       setTasks(prev => [...prev, newTask]);
       setTask('');
       setShowTimePicker(true);
-
-      Keyboard.dismiss();
     }
+    
+    Keyboard.dismiss();
   };
 
   const deleteTask = async (id) => {
+    const newTasks = removeTask(tasks, id);
+
     const taskToDelete = tasks.find(task => task.id === id)
 
-    if (taskToDelete?.notificationId) {
-      await Notifications.cancelScheduledNotificationAsync(taskToDelete.notificationId);
-    }
+    await cancelTaskNotification(taskToDelete);
 
-    setTasks(prev => prev.filter(task => task.id !== id));
+    setTasks(newTasks);
   };
 
   const toggleSelectedTask = (item) => {
