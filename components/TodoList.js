@@ -5,24 +5,18 @@ import {
   TextInput,
   FlatList,
   StyleSheet,
-  TouchableOpacity,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import SwipeableItem from 'react-native-swipeable-item';
 import { Button } from 'react-native-elements';
 
 import { colors } from '../theme.js'; // Import your color palette
 
 export default function TodoList() {
-  // Task input value
   const [task, setTask] = useState('');
-
-  // Array of tasks
   const [tasks, setTasks] = useState([]);
-
-  // Get safe area insets for notch/padding (iOS)
   const insets = useSafeAreaInsets();
 
-  // Add a task to the list
   const addTask = () => {
     const trimmed = task.trim();
     if (trimmed) {
@@ -32,12 +26,14 @@ export default function TodoList() {
     }
   };
 
+  const deleteTask = (id) => {
+    setTasks(prev => prev.filter(task => task.id !== id));
+  };
+
   return (
     <View style={[{ paddingTop: insets.top, paddingBottom: insets.bottom }, styles.container]}>
-      {/* Set status bar color and text/icon style */}
       <Text style={styles.heading}>My ToDo List</Text>
 
-      {/* Input and add button row */}
       <View style={styles.inputRow}>
         <TextInput
           style={styles.input}
@@ -47,18 +43,32 @@ export default function TodoList() {
           onChangeText={setTask}
           returnKeyType="done"
         />
-        <Button title="Add" buttonStyle={{backgroundColor: colors.secondary}} titleStyle={{color: colors.grey}} onPress={addTask} />
+        <Button
+          title="Add"
+          buttonStyle={{ backgroundColor: colors.secondary }}
+          titleStyle={{ color: colors.grey }}
+          onPress={addTask}
+        />
       </View>
 
-      {/* Task list */}
       <FlatList
         style={styles.list}
         data={tasks}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.listItem} activeOpacity={0.8}>
-            <Text style={styles.itemText}>{item.value}</Text>
-          </TouchableOpacity>
+          <SwipeableItem
+            key={item.id}
+            snapPointsRight={[80]} // Only allow swipe left to reveal right side
+            onChange={(open) => {
+              if (open) {
+                deleteTask(item.id);
+              }
+            }}
+          >
+            <View style={styles.listItem}>
+              <Text style={styles.itemText}>{item.value}</Text>
+            </View>
+          </SwipeableItem>
         )}
       />
     </View>
@@ -81,7 +91,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     fontFamily: 'Oswald-Bold',
-    // You can add fontFamily if using custom fonts
   },
   inputRow: {
     flexDirection: 'row',
@@ -106,17 +115,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondary,
     borderRadius: 4,
     marginBottom: 8,
-
-    // Shadow (iOS)
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-
-    // Elevation (Android)
     elevation: 2,
   },
   itemText: {
     fontSize: 16,
-    color: '#000', // Ensure text is visible
+    color: '#000',
   },
 });

@@ -20,7 +20,10 @@
     "react": "19.0.0",
     "react-native": "0.79.2",
     "react-native-elements": "^3.4.3",
+    "react-native-gesture-handler": "~2.24.0",
+    "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
+    "react-native-swipeable-item": "^2.0.9",
     "react-native-vector-icons": "^10.2.0"
   },
   "devDependencies": {
