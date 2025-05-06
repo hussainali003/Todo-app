@@ -10,6 +10,7 @@ import TodoList from './components/TodoList';
 
 export default function App() {
   const [fontsLoaded] = Font.useFonts({
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, no-undef
     'Oswald-Bold': require('./assets/fonts/Oswald-Bold.ttf'),
   });
 
